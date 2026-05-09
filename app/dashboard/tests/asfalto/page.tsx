@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
+import { usePrintScale } from '@/src/lib/hooks/usePrintScale';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Printer, FileSpreadsheet, Layers, CheckCircle2, XCircle, Beaker, Settings, FileText, Zap, Activity, Coins, FolderOpen, Truck } from 'lucide-react';
@@ -157,6 +158,12 @@ function AsphaltTestContent() {
   const { credits, freeReportsUsed, consumeCredit, addCredits, initialize } = useCreditStore();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+  const [hasPrinted, setHasPrinted] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  // Hook de escala automática para impresión
+  usePrintScale(980, 'print-scale-wrapper-asfalto');
 
   useEffect(() => {
     async function fetchProfileAndTest() {
@@ -288,6 +295,34 @@ function AsphaltTestContent() {
     }
   };
 
+  const renderReport = () => <AsphaltReportTemplate data={data} profile={profile} />;
+
+  const handleConfirmPrint = async () => {
+    setIsPrinting(true);
+    try {
+      if (consumeCredit()) {
+        // Sync with Supabase
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('profiles').update({
+            credits: useCreditStore.getState().credits,
+            free_reports_used: useCreditStore.getState().freeReportsUsed
+          }).eq('id', user.id);
+        }
+        
+        window.print();
+        setHasPrinted(true);
+        setShowPrintConfirm(false);
+      } else {
+        alert("No tienes suficientes créditos. Por favor recarga para imprimir este reporte.");
+      }
+    } catch (error: any) {
+      alert("Error al procesar el crédito: " + error.message);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   // --- MOTOR SVG PARA LA GRÁFICA �PTIMA ---
   const renderChart = () => {
     const W = 800; const H = 400; const padX = 60; const padY = 40;
@@ -368,56 +403,99 @@ function AsphaltTestContent() {
             <button onClick={() => setViewMode("GRAFICA")} className={`px-5 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x flex items-center gap-2 ${viewMode === "GRAFICA" ? 'bg-[#141414] text-[#2BD45A] border-[#2BD45A]/50 shadow-[0_-5px_15px_rgba(43,212,90,0.15)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
               <Activity size={14} /> GRAFICA OPTIMA
             </button>
+            <button onClick={() => setViewMode("PREVIEW")} className={`px-5 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x flex items-center gap-2 ${viewMode === "PREVIEW" ? 'bg-[#141414] text-[#FF5F15] border-[#FF5F15]/50 shadow-[0_-5px_15px_rgba(255,95,21,0.15)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
+              <FileText size={14} /> VISTA PREVIA
+            </button>
           </div>
 
-          <div className="bg-[#141414] border border-[#FF5F15]/30 rounded-2xl rounded-tl-none p-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#FF5F15]/20 p-3 rounded-xl border border-[#FF5F15]/30"><Zap className="text-[#FF5F15]" size={24} /></div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Laboratorio Asfaltos PRO V2</h1>
-                <p className="text-zinc-500 text-xs">Evaluador inteligente de granulometría y características.</p>
+          <div className="bg-[#141414]/80 border border-[#FF5F15]/30 rounded-2xl rounded-tl-none p-3 md:p-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center gap-3 w-full lg:w-auto">
+              <div className="bg-[#FF5F15]/20 p-2 md:p-3 rounded-xl border border-[#FF5F15]/30 shrink-0"><Zap className="text-[#FF5F15]" size={22} /></div>
+              <div className="min-w-0">
+                <h1 className="text-lg md:text-xl font-bold text-white truncate">Asfaltos PRO V2</h1>
+                <p className="text-zinc-500 text-[10px] md:text-xs truncate">Evaluador inteligente.</p>
               </div>
             </div>
-            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center w-full md:w-auto">
-              <select value={data.status} onChange={e => handleChange('status', e.target.value)} className={`w-full md:w-auto bg-[#0a0a0a] border rounded-lg p-2 text-xs font-bold outline-none cursor-pointer ${data.status === 'FINALIZADO' ? 'text-[#2BD45A] border-[#2BD45A]/50' : 'text-yellow-500 border-yellow-500/50'}`}>
+            <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
+              <select value={data.status} onChange={e => handleChange('status', e.target.value)} className={`flex-1 lg:flex-none bg-[#0a0a0a] border rounded-lg p-2 text-[10px] md:text-xs font-bold outline-none cursor-pointer ${data.status === 'FINALIZADO' ? 'text-[#2BD45A] border-[#2BD45A]/50' : 'text-yellow-500 border-yellow-500/50'}`}>
                 <option value="EN PROCESO">EN PROCESO</option>
                 <option value="FINALIZADO">FINALIZADO</option>
               </select>
-              <div className="flex items-center justify-between md:justify-start gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 w-full md:w-auto">
-                 <div className="flex items-center gap-2">
-                   <Coins size={16} className="text-yellow-500" />
-                   <div className="text-xs">
-                     <span className="text-zinc-400">Créditos: </span>
-                     <span className="font-bold text-white">{freeReportsUsed < 3 ? `Gratis (${3 - freeReportsUsed})` : credits}</span>
+              <div className="flex items-center justify-between gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 flex-1 lg:flex-none">
+                 <div className="flex items-center gap-1">
+                   <Coins size={14} className="text-yellow-500" />
+                   <div className="text-[10px] md:text-xs">
+                     <span className="font-bold text-white">{freeReportsUsed < 3 ? `Gratis` : credits}</span>
                    </div>
                  </div>
-                 <button onClick={() => addCredits(5)} className="ml-2 text-[10px] bg-zinc-800 hover:bg-[#FF5F15] px-2 py-1 rounded text-white transition-colors border border-zinc-700">+ Recargar</button>
+                 <button onClick={() => addCredits(5)} className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded text-white border border-zinc-700">+</button>
               </div>
               <Button 
                 onClick={handleSave} 
-                className="w-full md:w-auto gap-2 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 shadow-none"
+                className="flex-1 lg:flex-none gap-2 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 h-auto py-2 text-xs"
               >
-                {isSaving ? <Activity className="animate-spin" size={20} /> : <FileText size={20} />}
-                {isSaving ? 'Guardando...' : 'Guardar Ensaye'}
+                {isSaving ? <Activity className="animate-spin" size={16} /> : <FileText size={16} />}
+                <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar'}</span>
+                <span className="sm:hidden">OK</span>
               </Button>
               <Button 
-                onClick={() => {
-                  if (consumeCredit()) {
-                    window.print();
-                  } else {
-                    alert("No tienes suficientes créditos. Por favor recarga para imprimir este reporte.");
-                  }
-                }} 
-                className="w-full md:w-auto gap-2 bg-[#FF5F15] hover:bg-[#e04f0f] shadow-[0_0_20px_rgba(255,95,21,0.3)]"
+                onClick={() => setShowPrintConfirm(true)} 
+                disabled={hasPrinted || isPrinting}
+                className={`flex-1 lg:flex-none gap-2 h-auto py-2 text-xs shadow-none ${hasPrinted ? 'bg-zinc-700 opacity-50' : 'bg-[#FF5F15] hover:bg-[#e04f0f]'}`}
               >
-                <Printer size={20} /> Imprimir PDF
+                <Printer size={16} /> 
+                <span className="hidden sm:inline">{hasPrinted ? 'Generado' : 'PDF'}</span>
+                <span className="sm:hidden">{hasPrinted ? 'Listo' : 'PDF'}</span>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* CONTENIDO CONDICIONAL (Datos vs Gráfica) */}
-        {viewMode === "GRAFICA" ? renderChart() : (
+        {/* MODAL DE CONFIRMACIÓN DE CRÉDITO */}
+        {showPrintConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-[#141414] border border-[#FF5F15]/50 p-8 rounded-3xl max-w-md w-full shadow-[0_0_50px_rgba(255,95,21,0.2)]">
+              <div className="bg-[#FF5F15]/20 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                <Coins size={32} className="text-[#FF5F15]" />
+              </div>
+              <h2 className="text-2xl font-bold text-white text-center mb-2">¿Confirmar Impresión?</h2>
+              <p className="text-zinc-400 text-center mb-8 text-sm">
+                Esta acción consumirá <span className="text-white font-bold">1 crédito</span> de tu cuenta. 
+                Asegúrate de que todos los datos sean correctos en la vista previa antes de continuar.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={handleConfirmPrint}
+                  disabled={isPrinting}
+                  className="w-full bg-[#FF5F15] hover:bg-[#e04f0f] py-6 rounded-2xl font-bold text-lg"
+                >
+                  {isPrinting ? 'Procesando...' : 'Sí, Gastar 1 Crédito'}
+                </Button>
+                <button 
+                  onClick={() => setShowPrintConfirm(false)}
+                  className="w-full py-3 text-zinc-500 hover:text-white transition-colors text-sm font-semibold"
+                >
+                  Cancelar y revisar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CONTENIDO CONDICIONAL (Datos vs Gráfica vs Preview) */}
+        {viewMode === "GRAFICA" ? renderChart() : viewMode === "PREVIEW" ? (
+          <div className="flex flex-col items-center w-full">
+            <div className="w-full bg-[#141414] border border-zinc-800 rounded-3xl p-4 md:p-8 shadow-2xl overflow-x-auto custom-scrollbar">
+               <div className="min-w-[980px] bg-white p-8 rounded-lg shadow-inner mx-auto text-black font-sans leading-none">
+                  <p className="text-zinc-400 mb-6 text-center font-sans text-xs tracking-widest uppercase border-b border-zinc-100 pb-4 print:hidden">Documento Final (Vista Previa)</p>
+                  {renderReport()}
+               </div>
+            </div>
+            <div className="mt-6 text-center p-4 bg-[#FF5F15]/10 border border-[#FF5F15]/20 rounded-2xl max-w-md">
+              <p className="text-[#FF5F15] text-xs font-medium">Usa el desplazamiento horizontal para revisar el reporte completo antes de imprimir.</p>
+            </div>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
             {/* COLUMNA IZQUIERDA */}
@@ -425,18 +503,18 @@ function AsphaltTestContent() {
 
               {/* 1. Muestreo */}
               <div className="bg-[#141414] border border-zinc-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                <h2 className="text-[#FF5F15] font-semibold mb-4 flex items-center gap-2 text-sm"><Beaker size={16} /> DATOS DEL MUESTREO</h2>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">ENSAYE N°</label><input type="text" value={data.ensayeNo} onChange={e => handleChange('ensayeNo', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">LICITACI�N NO.</label><input type="text" value={data.licitacionNo} onChange={e => handleChange('licitacionNo', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">FECHA MUESTREO</label><input type="date" value={data.fechaMuestreo} onChange={e => handleChange('fechaMuestreo', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">FECHA ENSAYE</label><input type="date" value={data.fechaEnsaye} onChange={e => handleChange('fechaEnsaye', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white" /></div>
-                  <div><label className="block text-[10px] text-[#FF5F15] mb-1 font-bold">NORMATIVA APLICABLE</label>
-                    <select value={data.normativa} onChange={e => handleChange('normativa', e.target.value)} className="w-full bg-[#141414] border border-[#FF5F15]/50 rounded p-2 text-xs text-[#FF5F15] font-bold outline-none cursor-pointer">
-                      <option value="M.MMP.4.04.002 (Granulometría SCT)">M.MMP.4.04.002 (Granulometría)</option>
-                      <option value="M.MMP.4.04.003 (Densidad)">M.MMP.4.04.003 (Densidad)</option>
-                      <option value="ASTM D-6928 (Micro-Deval)">ASTM D-6928 (Micro-Deval)</option>
-                      <option value="OTRA">OTRA (Indicar en obs.)</option>
+                <h2 className="text-[#FF5F15] font-semibold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider"><Beaker size={16} /> Datos del Muestreo</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-4">
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Ensaye N°</label><input type="text" value={data.ensayeNo} onChange={e => handleChange('ensayeNo', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Licitación No.</label><input type="text" value={data.licitacionNo} onChange={e => handleChange('licitacionNo', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Fecha Muestreo</label><input type="date" value={data.fechaMuestreo} onChange={e => handleChange('fechaMuestreo', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Fecha Ensaye</label><input type="date" value={data.fechaEnsaye} onChange={e => handleChange('fechaEnsaye', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white" /></div>
+                  <div className="sm:col-span-2 lg:col-span-1"><label className="block text-[10px] text-[#FF5F15] mb-1 font-bold uppercase tracking-tight">Normativa</label>
+                    <select value={data.normativa} onChange={e => handleChange('normativa', e.target.value)} className="w-full bg-[#141414] border border-[#FF5F15]/50 rounded-lg p-2 text-xs text-[#FF5F15] font-bold outline-none cursor-pointer">
+                      <option value="M.MMP.4.04.002 (Granulometría SCT)">Granulometría</option>
+                      <option value="M.MMP.4.04.003 (Densidad)">Densidad</option>
+                      <option value="ASTM D-6928 (Micro-Deval)">Micro-Deval</option>
+                      <option value="OTRA">OTRA</option>
                     </select>
                   </div>
                 </div>
@@ -455,13 +533,13 @@ function AsphaltTestContent() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="md:col-span-2"><label className="block text-[10px] text-zinc-500 mb-1 text-[#FF5F15]">DESCRIPCI�N DEL MATERIAL</label><input type="text" value={data.descripcionMaterial} onFocus={handleFocus} onChange={e => handleChange('descripcionMaterial', e.target.value)} className="w-full bg-[#0a0a0a] border border-[#FF5F15]/30 rounded p-2 text-xs text-white outline-none" /></div>
-                  <div className="md:col-span-2"><label className="block text-[10px] text-zinc-500 mb-1">UBICACI�N DEL BANCO</label><input type="text" value={data.ubicacionBanco} onFocus={handleFocus} onChange={e => handleChange('ubicacionBanco', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white focus:border-[#FF5F15] outline-none" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">TRATAMIENTO PREVIO</label><input type="text" value={data.tratamientoPrevio} onFocus={handleFocus} onChange={e => handleChange('tratamientoPrevio', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white focus:border-[#FF5F15] outline-none" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1 text-[#FF5F15]">CLASIFICACI�N PETROGRÁFICA</label><input type="text" value={data.clasificacionPetrografica} onFocus={handleFocus} onChange={e => handleChange('clasificacionPetrografica', e.target.value)} className="w-full bg-[#0a0a0a] border border-[#FF5F15]/30 rounded p-2 text-xs text-white outline-none" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">PARA USARSE EN</label><input type="text" value={data.paraUsarseEn} onFocus={handleFocus} onChange={e => handleChange('paraUsarseEn', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-white focus:border-[#FF5F15] outline-none" /></div>
-                  <div><label className="block text-[10px] text-zinc-500 mb-1">PESO VOL. SUELTO (kg/m3)</label><input type="text" value={data.pesoVolSuelto} onFocus={handleFocus} onChange={e => handleChange('pesoVolSuelto', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded p-2 text-xs text-[#2BD45A] font-bold focus:border-[#FF5F15] outline-none" /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                  <div className="sm:col-span-2"><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight text-[#FF5F15]">Descripción Material</label><input type="text" value={data.descripcionMaterial} onFocus={handleFocus} onChange={e => handleChange('descripcionMaterial', e.target.value)} className="w-full bg-[#0a0a0a] border border-[#FF5F15]/30 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                  <div className="sm:col-span-2"><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Ubicación Banco</label><input type="text" value={data.ubicacionBanco} onFocus={handleFocus} onChange={e => handleChange('ubicacionBanco', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white focus:border-[#FF5F15] outline-none" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Tratamiento Previo</label><input type="text" value={data.tratamientoPrevio} onFocus={handleFocus} onChange={e => handleChange('tratamientoPrevio', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white focus:border-[#FF5F15] outline-none" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight text-[#FF5F15]">Petrografía</label><input type="text" value={data.clasificacionPetrografica} onFocus={handleFocus} onChange={e => handleChange('clasificacionPetrografica', e.target.value)} className="w-full bg-[#0a0a0a] border border-[#FF5F15]/30 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Uso en</label><input type="text" value={data.paraUsarseEn} onFocus={handleFocus} onChange={e => handleChange('paraUsarseEn', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-white focus:border-[#FF5F15] outline-none" /></div>
+                  <div><label className="block text-[10px] text-zinc-500 mb-1 uppercase tracking-tight">Peso Vol. (kg/m3)</label><input type="text" value={data.pesoVolSuelto} onFocus={handleFocus} onChange={e => handleChange('pesoVolSuelto', e.target.value)} className="w-full bg-[#0a0a0a] border border-zinc-700 rounded-lg p-2 text-xs text-[#2BD45A] font-bold focus:border-[#FF5F15] outline-none" /></div>
                 </div>
               </div>
 
@@ -560,183 +638,207 @@ function AsphaltTestContent() {
             </div>
           </div>
         )}
-      </div>
 
-      {/* =========================================
-          VISTA DE IMPRESI�N (PDF PIXEL PERFECT)
-          ========================================= */}
-      <div className="hidden print:block bg-white text-black font-sans leading-none pt-2" style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-        <div className="mx-auto w-[980px] border-[3px] border-black text-[10px] relative">
-          {profile?.company_logo_url && (
-             <img src={profile.company_logo_url} alt="Logo" className="absolute top-2 left-2 w-24 h-auto object-contain z-10" />
-          )}
-          <div className="bg-yellow-300 font-bold text-center py-2 text-[14px] border-b-[3px] border-black uppercase !bg-yellow-300" style={{ backgroundColor: '#fde047' }}>
-            REPORTE DE ENSAYE DE CONCRETO ASFALTICO
-          </div>
-
-          <div className="flex border-b-[3px] border-black p-2">
-             <div className="w-1/2 space-y-2 text-[10px]">
-                <div className="flex"><span className="font-bold w-[40%]">OBRA / LICITACI�N:</span><span>{data.licitacionNo}</span></div>
-                <div className="flex"><span className="font-bold w-[40%]">MATERIAL:</span><span>{data.descripcionMaterial}</span></div>
-                <div className="flex"><span className="font-bold w-[40%]">UBICACI�N:</span><span>{data.ubicacionBanco}</span></div>
-             </div>
-             <div className="w-1/2 space-y-2 text-right text-[10px]">
-                <div className="flex justify-end"><span className="font-bold w-[40%] text-left">ENSAYE N°:</span><span className="w-1/3 text-left">{data.ensayeNo}</span></div>
-                <div className="flex justify-end"><span className="font-bold w-[40%] text-left">FECHA MUESTREO:</span><span className="w-1/3 text-left">{data.fechaMuestreo}</span></div>
-                <div className="flex justify-end"><span className="font-bold w-[40%] text-left">FECHA ENSAYE:</span><span className="w-1/3 text-left">{data.fechaEnsaye}</span></div>
-             </div>
-          </div>
-
-          <div className="flex border-b-[3px] border-black p-2 bg-yellow-100 !bg-yellow-100 font-bold justify-center" style={{ backgroundColor: '#fef9c3' }}>
-            NORMATIVA DE REFERENCIA: {data.normativa}
-          </div>
-
-          <div className="flex border-b-[3px] border-black text-[9px]">
-            <div className="w-[15%] p-2 font-bold flex items-center justify-center text-center border-r-[2px] border-black">DATOS DEL MUESTREO</div>
-            <div className="w-[85%] p-1.5">
-              <table className="w-full">
-                <tbody>
-                  <tr><td className="font-bold w-[28%] pb-1">DESCRIPCION DEL MATERIAL:</td><td className="w-[42%] italic pb-1">{data.descripcionMaterial}</td><td className="font-bold w-[15%] pb-1">PARA USARSE EN:</td><td className="italic pb-1">{data.paraUsarseEn}</td></tr>
-                  <tr><td className="font-bold pb-1">TRATAMIENTO PREVIO AL MUESTREO:</td><td colSpan={3} className="italic pb-1">{data.tratamientoPrevio}</td></tr>
-                  <tr><td className="font-bold pb-1">CLASE DE DEPOSITO MUESTREADO:</td><td colSpan={3} className="italic pb-1">{data.claseDeposito}</td></tr>
-                  <tr><td className="font-bold">UBICACI N DEL BANCO DONDE PROCEDE EL MATERIAL PETREO:</td><td colSpan={3} className="italic">{data.ubicacionBanco}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="flex border-b-[3px] border-black">
-            <div className="w-[68%] border-r-[3px] border-black flex flex-col">
-              <div className="flex border-b-[2px] border-black text-[9px] h-[34px]">
-                <div className="w-[50%] flex flex-col">
-                  <div className="flex flex-1 border-b border-black">
-                    <div className="w-[55%] p-1 font-bold border-r border-black flex items-center">CLASIFICACION PETROGRAFICA</div>
-                    <div className="w-[45%] p-1 font-bold text-center flex items-center justify-center">{data.clasificacionPetrografica}</div>
-                  </div>
-                  <div className="flex flex-1">
-                    <div className="w-[55%] p-1 font-bold border-r border-black flex items-center">PESO VOL. SUELTO, kg/m3</div>
-                    <div className="w-[45%] p-1 font-bold text-center flex items-center justify-center">{data.pesoVolSuelto}</div>
-                  </div>
-                </div>
-                <div className="w-[50%] border-l border-black flex flex-col items-end pt-1 pr-1 text-[7px] text-gray-500"><span>VO _________</span><span>USADO _________</span></div>
-              </div>
-              <div className="bg-gray-200 text-center font-bold py-1 border-b-[2px] border-black text-[10px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>GRANULOMETRIA</div>
-              <table className="w-full text-center border-collapse text-[9px]">
-                <thead>
-                  <tr className="border-b-[2px] border-black font-bold">
-                    <th className="border-r border-black p-1">MALLA</th><th className="border-r border-black p-1">NORMA</th><th className="border-r border-black p-1">% QUE PASA</th><th className="p-1">PROYECTO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.granulometria.map((row, idx) => (
-                    <tr key={idx} className="border-b border-gray-400 last:border-b-[2px] last:border-black h-[16px]">
-                      <td className="border-r border-black font-bold text-left pl-2">{row.malla}</td><td className="border-r border-black text-[8px]">{data.normaGranulometria}</td><td className="border-r border-black font-bold">{row.pasa}</td><td>{row.min}-{row.max}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="bg-gray-200 text-center font-bold py-1 border-b-[2px] border-black text-[10px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>CARACTERISTICAS DEL AGREGADO</div>
-              <table className="w-full text-left border-collapse text-[8px]">
-                <tbody>
-                  {data.caracteristicasAgregado.map((row, idx) => (
-                    <tr key={idx} className="border-b border-gray-400 h-[15px]">
-                      <td className="border-r border-black font-bold uppercase w-[42%] pl-1">{row.car}</td><td className="border-r border-black w-[25%] text-center">{row.norma}</td><td className="border-r border-black font-bold w-[15%] text-center">{row.res}</td><td className="text-center font-bold">{row.proy}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="w-[32%] flex flex-col bg-white text-[8px]">
-              <div className="h-[34px] border-b-[2px] border-black"></div>
-              <table className="w-full text-center border-collapse">
-                <tbody>
-                  {[...data.granulometria].reverse().map((row, idx) => {
-                    const m = row.malla.match(/\(([\d.]+)/);
-                    const s = m ? parseFloat(m[1]) : 0;
-                    return (
-                      <tr key={idx} className="border-b border-gray-400 h-[16px]">
-                        <td className="border-r border-black w-[15%]">{s > 0 ? s.toFixed(3) : 0}</td><td className="border-r border-black w-[20%]">{s > 0 ? Math.log10(s).toFixed(4) : 0}</td>
-                        <td className="border-r border-black w-[15%]">{row.min.toFixed(1)}</td><td className="border-r border-black w-[15%]">{row.max.toFixed(1)}</td>
-                        <td className="border-r border-black w-[15%]">{Number(row.pasa).toFixed(1)}</td><td className="w-[20%]">{row.min.toFixed(1)}-{row.max.toFixed(1)}</td>
-                      </tr>
-                    )
-                  })}
-                  {Array.from({ length: 6 }).map((_, i) => (<tr key={`f-${i}`} className="border-b border-gray-400 h-[16px]"><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td></td></tr>))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="flex border-b-[3px] border-black text-[8px] h-[130px]">
-            <div className="w-[38%] border-r-[3px] border-black flex flex-col">
-              <table className="w-full text-center border-collapse h-full">
-                <thead>
-                  <tr className="bg-gray-200 border-b-[2px] border-black h-[24px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>
-                    <th className="border-r border-black leading-tight">CARACTERISTICAS<br />DE LA MEZCLA</th><th className="border-r border-black leading-tight w-[20%]">MUESTREADA</th><th className="leading-tight w-[20%]">DEL<br />PROYECTO</th>
-                  </tr>
-                </thead>
-                <tbody className="text-left font-bold">
-                  <tr className="border-b border-gray-300"><td className="border-r border-black pl-2 py-1">CONTENIDO DE ASFALTO %</td><td className="border-r border-black text-center">{data.mezcla.contenidoAsfalto}</td><td className="text-center">-</td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black pl-8 text-[7px] py-1">MARCA.</td><td className="border-r border-black text-center font-normal">{data.mezcla.marca}</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black pl-8 text-[7px] py-1">TIPO.</td><td className="border-r border-black text-center font-normal">{data.mezcla.tipo}</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black pl-8 text-[7px] py-1">CANTIDAD./CA%</td><td className="border-r border-black text-center font-normal">{data.mezcla.cantidad}</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black pl-2 py-1 text-[7px]">AFINIDAD DEL MAT. PETREO. <span className="font-normal text-[6px] ml-1">M.MMP.4.04.009</span></td><td className="border-r border-black text-center">{data.mezcla.afinidad}</td><td className="text-center">BUENA</td></tr>
-                  <tr><td className="border-r border-black pl-2 py-1 leading-none text-[7px]">PERDIDA DE ESTABILIDAD POR INMERSION EN AGUA%</td><td className="border-r border-black text-center font-normal">{data.mezcla.perdidaEstabilidad}</td><td className="text-center">25 MAX.</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="w-[34%] border-r-[3px] border-black flex flex-col">
-              <table className="w-full text-center border-collapse h-full">
-                <thead>
-                  <tr className="bg-gray-200 border-b-[2px] border-black h-[24px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>
-                    <th className="border-r border-black leading-tight">CARACTERISTICAS DEL<br />ESPECIMEN</th><th className="border-r border-black w-[20%]">NORMAS</th><th className="border-r border-black w-[20%]">RESULTADOS</th><th className="w-[15%]">ESPECIF.</th>
-                  </tr>
-                </thead>
-                <tbody className="font-bold">
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">PESO VOLUMETRICO (KG/cm³)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.pesoVol}</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">ESTABILIDAD (KGS.)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.estabilidad} MIN</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">FLUJO (mm.)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.flujo}</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">VACIOS (%)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.vacios}</td><td></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">V.A.M. (%)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.vam} MIN</td><td></td></tr>
-                  <tr><td className="border-r border-black text-[7px] py-1 text-left pl-1">V.A.F. %</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.vaf}</td><td></td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div className="w-[28%] flex flex-col">
-              <table className="w-full text-center border-collapse h-full">
-                <thead>
-                  <tr className="bg-gray-200 border-b-[2px] border-black h-[24px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>
-                    <th className="border-r border-black leading-tight">CARACTERISTICAS<br />DEL ASFALTO.</th><th className="text-[7px] border-b border-black">TIPO &nbsp;&nbsp;&nbsp;&nbsp; {data.asfalto.tipoPG} &nbsp;&nbsp;&nbsp;&nbsp; NORMAS</th>
-                  </tr>
-                </thead>
-                <tbody className="font-bold text-[7px]">
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-right pr-2 py-1.5">PENET. 25°C 100g 5s.</td><td className="text-left pl-2 flex justify-between pr-2"><span>{data.asfalto.penetracion}</span> <span className="font-normal text-[6px]">M.MMP.4-05-006</span></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-right pr-2 py-1.5">VISCOSIDAD SAYBOLT F.S</td><td className="text-left pl-2 flex justify-between pr-2"><span>{data.asfalto.viscosidad}</span> <span className="font-normal text-[6px]">M.MMP.4-05-004</span></td></tr>
-                  <tr className="border-b border-gray-300"><td className="border-r border-black text-right pr-2 py-1.5">TEMP. RECOM.</td><td className="text-center">{data.asfalto.tempRecom}</td></tr>
-                  <tr><td className="border-r border-black text-right pr-2 py-1.5">TEMP. APLIC.</td><td className="text-center">{data.asfalto.tempAplic}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="p-2 border-b-[3px] border-black h-[80px]"><div className="font-bold text-[9px]">OBSERVACIONES:</div><div className="text-center font-bold uppercase mt-4 text-[12px] tracking-wide">{data.observaciones}</div></div>
-          <div className="flex h-[70px] text-center items-end pb-2 text-[9px] font-bold">
-            <div className="w-1/3 px-12"><div className="border-t border-black pt-1">LABORATORISTA.</div></div>
-            <div className="w-1/3 px-12"><div className="border-t border-black pt-1">JEFE DE LABORATORIO</div></div>
-            <div className="w-1/3 px-12"><div className="border-t border-black pt-1">VO.BO.</div></div>
-          </div>
-        </div>
-        <div className="mx-auto mt-2 text-[9px] font-bold relative w-[980px]">
-          <div className="mb-2 text-gray-700 ml-4">{data.tecnico}</div>
-          <table className="w-[180px] ml-4 text-gray-700">
-            <tbody>
-              <tr><td className="pb-1 align-top w-[60%]">% de Cem. En peso</td><td className="text-right pb-1 leading-tight">{data.extras.cemPeso1}<br />{data.extras.cemPeso2}</td></tr>
-              <tr><td className="py-0.5">Cemento Asfaltico</td><td className="text-right py-0.5">{data.extras.cementoAsfaltico}</td></tr>
-              <tr><td className="py-0.5">Material petreo</td><td className="text-right py-0.5">{data.extras.materialPetreo}</td></tr>
-              <tr><td className="py-0.5">Densidad del C. Asf.</td><td className="text-right py-0.5">{data.extras.densidadCAsf}</td></tr>
-            </tbody>
-          </table>
-          <div className="absolute right-4 bottom-0 text-gray-700 text-[10px] tracking-wider">{data.formatoUnico}</div>
+      {/* ZONA DE IMPRESIÓN — siempre en el DOM, oculta visualmente en pantalla,
+          visible al imprimir gracias a .print-area en globals.css */}
+      <div
+        className="print-area"
+        style={{
+          position: 'fixed',
+          top: '-9999px',
+          left: '-9999px',
+          width: '980px',
+          background: 'white',
+          color: 'black',
+        } as React.CSSProperties}
+      >
+        <div
+          id="print-scale-wrapper-asfalto"
+          className="print-scale-wrapper bg-white text-black font-sans leading-none"
+          style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' } as React.CSSProperties}
+        >
+          {renderReport()}
         </div>
       </div>
     </div>
+  </div>
+);
+}
+
+// --- TEMPLATE DEL REPORTE (EXTRADO PARA REUSAR EN PREVIEW) ---
+function AsphaltReportTemplate({ data, profile }: { data: any, profile: any }) {
+  return (
+    <>
+      <div className="mx-auto w-[980px] border-[3px] border-black text-[10px] relative">
+      {profile?.company_logo_url && (
+          <img src={profile.company_logo_url} alt="Logo" className="absolute top-2 left-2 w-24 h-auto object-contain z-10" />
+      )}
+      <div className="bg-yellow-300 font-bold text-center py-2 text-[14px] border-b-[3px] border-black uppercase !bg-yellow-300" style={{ backgroundColor: '#fde047' }}>
+        REPORTE DE ENSAYE DE CONCRETO ASFALTICO
+      </div>
+
+      <div className="flex border-b-[3px] border-black p-2">
+          <div className="w-1/2 space-y-2 text-[10px]">
+            <div className="flex"><span className="font-bold w-[40%]">OBRA / LICITACI N:</span><span>{data.licitacionNo}</span></div>
+            <div className="flex"><span className="font-bold w-[40%]">MATERIAL:</span><span>{data.descripcionMaterial}</span></div>
+            <div className="flex"><span className="font-bold w-[40%]">UBICACI N:</span><span>{data.ubicacionBanco}</span></div>
+          </div>
+          <div className="w-1/2 space-y-2 text-right text-[10px]">
+            <div className="flex justify-end"><span className="font-bold w-[40%] text-left">ENSAYE N°:</span><span className="w-1/3 text-left">{data.ensayeNo}</span></div>
+            <div className="flex justify-end"><span className="font-bold w-[40%] text-left">FECHA MUESTREO:</span><span className="w-1/3 text-left">{data.fechaMuestreo}</span></div>
+            <div className="flex justify-end"><span className="font-bold w-[40%] text-left">FECHA ENSAYE:</span><span className="w-1/3 text-left">{data.fechaEnsaye}</span></div>
+          </div>
+      </div>
+
+      <div className="flex border-b-[3px] border-black p-2 bg-yellow-100 !bg-yellow-100 font-bold justify-center" style={{ backgroundColor: '#fef9c3' }}>
+        NORMATIVA DE REFERENCIA: {data.normativa}
+      </div>
+
+      <div className="flex border-b-[3px] border-black text-[9px]">
+        <div className="w-[15%] p-2 font-bold flex items-center justify-center text-center border-r-[2px] border-black">DATOS DEL MUESTREO</div>
+        <div className="w-[85%] p-1.5">
+          <table className="w-full">
+            <tbody>
+              <tr><td className="font-bold w-[28%] pb-1">DESCRIPCION DEL MATERIAL:</td><td className="w-[42%] italic pb-1">{data.descripcionMaterial}</td><td className="font-bold w-[15%] pb-1">PARA USARSE EN:</td><td className="italic pb-1">{data.paraUsarseEn}</td></tr>
+              <tr><td className="font-bold pb-1">TRATAMIENTO PREVIO AL MUESTREO:</td><td colSpan={3} className="italic pb-1">{data.tratamientoPrevio}</td></tr>
+              <tr><td className="font-bold pb-1">CLASE DE DEPOSITO MUESTREADO:</td><td colSpan={3} className="italic pb-1">{data.claseDeposito}</td></tr>
+              <tr><td className="font-bold">UBICACI N DEL BANCO DONDE PROCEDE EL MATERIAL PETREO:</td><td colSpan={3} className="italic">{data.ubicacionBanco}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="flex border-b-[3px] border-black">
+        <div className="w-[68%] border-r-[3px] border-black flex flex-col">
+          <div className="flex border-b-[2px] border-black text-[9px] h-[34px]">
+            <div className="w-[50%] flex flex-col">
+              <div className="flex flex-1 border-b border-black">
+                <div className="w-[55%] p-1 font-bold border-r border-black flex items-center">CLASIFICACION PETROGRAFICA</div>
+                <div className="w-[45%] p-1 font-bold text-center flex items-center justify-center">{data.clasificacionPetrografica}</div>
+              </div>
+              <div className="flex flex-1">
+                <div className="w-[55%] p-1 font-bold border-r border-black flex items-center">PESO VOL. SUELTO, kg/m3</div>
+                <div className="w-[45%] p-1 font-bold text-center flex items-center justify-center">{data.pesoVolSuelto}</div>
+              </div>
+            </div>
+            <div className="w-[50%] border-l border-black flex flex-col items-end pt-1 pr-1 text-[7px] text-gray-500"><span>VO _________</span><span>USADO _________</span></div>
+          </div>
+          <div className="bg-gray-200 text-center font-bold py-1 border-b-[2px] border-black text-[10px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>GRANULOMETRIA</div>
+          <table className="w-full text-center border-collapse text-[9px]">
+            <thead>
+              <tr className="border-b-[2px] border-black font-bold">
+                <th className="border-r border-black p-1">MALLA</th><th className="border-r border-black p-1">NORMA</th><th className="border-r border-black p-1">% QUE PASA</th><th className="p-1">PROYECTO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.granulometria.map((row: any, idx: number) => (
+                <tr key={idx} className="border-b border-gray-400 last:border-b-[2px] last:border-black h-[16px]">
+                  <td className="border-r border-black font-bold text-left pl-2">{row.malla}</td><td className="border-r border-black text-[8px]">{data.normaGranulometria}</td><td className="border-r border-black font-bold">{row.pasa}</td><td>{row.min}-{row.max}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bg-gray-200 text-center font-bold py-1 border-b-[2px] border-black text-[10px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>CARACTERISTICAS DEL AGREGADO</div>
+          <table className="w-full text-left border-collapse text-[8px]">
+            <tbody>
+              {data.caracteristicasAgregado.map((row: any, idx: number) => (
+                <tr key={idx} className="border-b border-gray-400 h-[15px]">
+                  <td className="border-r border-black font-bold uppercase w-[42%] pl-1">{row.car}</td><td className="border-r border-black w-[25%] text-center">{row.norma}</td><td className="border-r border-black font-bold w-[15%] text-center">{row.res}</td><td className="text-center font-bold">{row.proy}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="w-[32%] flex flex-col bg-white text-[8px]">
+          <div className="h-[34px] border-b-[2px] border-black"></div>
+          <table className="w-full text-center border-collapse">
+            <tbody>
+              {[...data.granulometria].reverse().map((row, idx) => {
+                const m = row.malla.match(/\(([\d.]+)/);
+                const s = m ? parseFloat(m[1]) : 0;
+                return (
+                  <tr key={idx} className="border-b border-gray-400 h-[16px]">
+                    <td className="border-r border-black w-[15%]">{s > 0 ? s.toFixed(3) : 0}</td><td className="border-r border-black w-[20%]">{s > 0 ? Math.log10(s).toFixed(4) : 0}</td>
+                    <td className="border-r border-black w-[15%]">{row.min.toFixed(1)}</td><td className="border-r border-black w-[15%]">{row.max.toFixed(1)}</td>
+                    <td className="border-r border-black w-[15%]">{Number(row.pasa).toFixed(1)}</td><td className="w-[20%]">{row.min.toFixed(1)}-{row.max.toFixed(1)}</td>
+                  </tr>
+                )
+              })}
+              {Array.from({ length: 6 }).map((_, i) => (<tr key={`f-${i}`} className="border-b border-gray-400 h-[16px]"><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td className="border-r border-black"></td><td></td></tr>))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="flex border-b-[3px] border-black text-[8px] h-[130px]">
+        <div className="w-[38%] border-r-[3px] border-black flex flex-col">
+          <table className="w-full text-center border-collapse h-full">
+            <thead>
+              <tr className="bg-gray-200 border-b-[2px] border-black h-[24px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>
+                <th className="border-r border-black leading-tight">CARACTERISTICAS<br />DE LA MEZCLA</th><th className="border-r border-black leading-tight w-[20%]">MUESTREADA</th><th className="leading-tight w-[20%]">DEL<br />PROYECTO</th>
+              </tr>
+            </thead>
+            <tbody className="text-left font-bold">
+              <tr className="border-b border-gray-300"><td className="border-r border-black pl-2 py-1">CONTENIDO DE ASFALTO %</td><td className="border-r border-black text-center">{data.mezcla.contenidoAsfalto}</td><td className="text-center">-</td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black pl-8 text-[7px] py-1">MARCA.</td><td className="border-r border-black text-center font-normal">{data.mezcla.marca}</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black pl-8 text-[7px] py-1">TIPO.</td><td className="border-r border-black text-center font-normal">{data.mezcla.tipo}</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black pl-8 text-[7px] py-1">CANTIDAD./CA%</td><td className="border-r border-black text-center font-normal">{data.mezcla.cantidad}</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black pl-2 py-1 text-[7px]">AFINIDAD DEL MAT. PETREO. <span className="font-normal text-[6px] ml-1">M.MMP.4.04.009</span></td><td className="border-r border-black text-center">{data.mezcla.afinidad}</td><td className="text-center">BUENA</td></tr>
+              <tr><td className="border-r border-black pl-2 py-1 leading-none text-[7px]">PERDIDA DE ESTABILIDAD POR INMERSION EN AGUA%</td><td className="border-r border-black text-center font-normal">{data.mezcla.perdidaEstabilidad}</td><td className="text-center">25 MAX.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="w-[34%] border-r-[3px] border-black flex flex-col">
+          <table className="w-full text-center border-collapse h-full">
+            <thead>
+              <tr className="bg-gray-200 border-b-[2px] border-black h-[24px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>
+                <th className="border-r border-black leading-tight">CARACTERISTICAS DEL<br />ESPECIMEN</th><th className="border-r border-black w-[20%]">NORMAS</th><th className="border-r border-black w-[20%]">RESULTADOS</th><th className="w-[15%]">ESPECIF.</th>
+              </tr>
+            </thead>
+            <tbody className="font-bold">
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">PESO VOLUMETRICO (KG/cm³)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.pesoVol}</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">ESTABILIDAD (KGS.)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.estabilidad} MIN</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">FLUJO (mm.)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.flujo}</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">VACIOS (%)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.vacios}</td><td></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-[7px] py-1 text-left pl-1">V.A.M. (%)</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.vam} MIN</td><td></td></tr>
+              <tr><td className="border-r border-black text-[7px] py-1 text-left pl-1">V.A.F. %</td><td className="border-r border-black text-[6px]">M.MMP.4.05.031</td><td className="border-r border-black text-center">{data.especimen.vaf}</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="w-[28%] flex flex-col">
+          <table className="w-full text-center border-collapse h-full">
+            <thead>
+              <tr className="bg-gray-200 border-b-[2px] border-black h-[24px] !bg-gray-200" style={{ backgroundColor: '#e5e7eb' }}>
+                <th className="border-r border-black leading-tight">CARACTERISTICAS<br />DEL ASFALTO.</th><th className="text-[7px] border-b border-black">TIPO &nbsp;&nbsp;&nbsp;&nbsp; {data.asfalto.tipoPG} &nbsp;&nbsp;&nbsp;&nbsp; NORMAS</th>
+              </tr>
+            </thead>
+            <tbody className="font-bold text-[7px]">
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-right pr-2 py-1.5">PENET. 25°C 100g 5s.</td><td className="text-left pl-2 flex justify-between pr-2"><span>{data.asfalto.penetracion}</span> <span className="font-normal text-[6px]">M.MMP.4-05-006</span></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-right pr-2 py-1.5">VISCOSIDAD SAYBOLT F.S</td><td className="text-left pl-2 flex justify-between pr-2"><span>{data.asfalto.viscosidad}</span> <span className="font-normal text-[6px]">M.MMP.4-05-004</span></td></tr>
+              <tr className="border-b border-gray-300"><td className="border-r border-black text-right pr-2 py-1.5">TEMP. RECOM.</td><td className="text-center">{data.asfalto.tempRecom}</td></tr>
+              <tr><td className="border-r border-black text-right pr-2 py-1.5">TEMP. APLIC.</td><td className="text-center">{data.asfalto.tempAplic}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="p-2 border-b-[3px] border-black h-[80px]"><div className="font-bold text-[9px]">OBSERVACIONES:</div><div className="text-center font-bold uppercase mt-4 text-[12px] tracking-wide">{data.observaciones}</div></div>
+      <div className="flex h-[70px] text-center items-end pb-2 text-[9px] font-bold">
+        <div className="w-1/3 px-12"><div className="border-t border-black pt-1">LABORATORISTA.</div></div>
+        <div className="w-1/3 px-12"><div className="border-t border-black pt-1">JEFE DE LABORATORIO</div></div>
+        <div className="w-1/3 px-12"><div className="border-t border-black pt-1">VO.BO.</div></div>
+      </div>
+    </div>
+    <div className="mx-auto mt-2 text-[9px] font-bold relative w-[980px]">
+      <div className="mb-2 text-gray-700 ml-4">{data.tecnico}</div>
+      <table className="w-[180px] ml-4 text-gray-700">
+        <tbody>
+          <tr><td className="pb-1 align-top w-[60%]">% de Cem. En peso</td><td className="text-right pb-1 leading-tight">{data.extras.cemPeso1}<br />{data.extras.cemPeso2}</td></tr>
+          <tr><td className="py-0.5">Cemento Asfaltico</td><td className="text-right py-0.5">{data.extras.cementoAsfaltico}</td></tr>
+          <tr><td className="py-0.5">Material petreo</td><td className="text-right py-0.5">{data.extras.materialPetreo}</td></tr>
+          <tr><td className="py-0.5">Densidad del C. Asf.</td><td className="text-right py-0.5">{data.extras.densidadCAsf}</td></tr>
+        </tbody>
+      </table>
+      <div className="absolute right-4 bottom-0 text-gray-700 text-[10px] tracking-wider">{data.formatoUnico}</div>
+    </div>
+    </>
   );
 }
 
