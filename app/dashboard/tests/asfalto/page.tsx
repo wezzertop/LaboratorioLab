@@ -5,6 +5,8 @@ import { usePrintScale } from '@/src/lib/hooks/usePrintScale';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Printer, FileSpreadsheet, Layers, CheckCircle2, XCircle, Beaker, Settings, FileText, Zap, Activity, Coins, FolderOpen, Truck } from 'lucide-react';
+import { TestPageHeader } from '@/src/components/ui/TestPageHeader';
+import { TestDashboard } from '@/src/components/ui/TestDashboard';
 import { EvaluatorEngine } from '@/src/lib/engine/EvaluatorEngine';
 import { useCreditStore } from '@/src/store/useCreditStore';
 import { Button } from '@/src/components/ui/Button';
@@ -72,7 +74,6 @@ const INITIAL_GRANULOMETRIA = [
 function AsphaltDashboard() {
   const [tests, setTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     async function loadTests() {
@@ -91,56 +92,19 @@ function AsphaltDashboard() {
     loadTests();
   }, []);
 
-  if (loading) return <div className="p-12 text-[#FF5F15] text-center">Cargando dashboard...</div>;
-
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] border border-[#FF5F15]/30 p-6 rounded-3xl shadow-[0_0_30px_rgba(255,95,21,0.05)]">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <Truck className="text-[#FF5F15]" />
-            Dashboard de Asfalto
-          </h1>
-          <p className="text-sm sm:text-base text-zinc-500">Historial global de todas tus pruebas de asfalto realizadas en diferentes obras.</p>
-        </div>
-        <Link href="/dashboard/projects" className="w-full sm:w-auto text-center bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">
-          Ir a Proyectos
-        </Link>
-      </div>
-
-      <div className="bg-[#0a0a0a] border border-zinc-800 rounded-3xl p-6 shadow-xl">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Activity className="text-[#FF5F15]" /> �altimos Ensayes
-        </h2>
-
-        {tests.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-zinc-800 rounded-2xl text-zinc-500">
-            Aún no has realizado pruebas de asfalto. Ve a un Proyecto y crea un nuevo ensaye.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tests.map(test => (
-              <div key={test.id} onClick={() => router.push(`/dashboard/tests/asfalto?testId=${test.id}&projectId=${test.project_id}`)} className="flex justify-between items-center p-4 bg-[#141414] border border-zinc-800 hover:border-[#FF5F15]/50 rounded-2xl transition-colors cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-lg bg-[#FF5F15]/10 text-[#FF5F15] group-hover:bg-[#FF5F15] group-hover:text-white transition-colors">
-                    <Truck size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{test.name}</h3>
-                    <p className="text-xs text-zinc-500">Obra: <span className="text-zinc-300 font-semibold">{test.projects?.name}</span> ⬢ {new Date(test.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${test.status === 'FINALIZADO' ? 'bg-[#2BD45A]/20 text-[#2BD45A]' : 'bg-yellow-500/20 text-yellow-500'}`}>
-                    {test.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <TestDashboard
+      icon={<Truck size={18} />}
+      title="Dashboard de Asfalto"
+      subtitle="Historial global de todas tus pruebas de asfalto realizadas en diferentes obras."
+      accentBg="bg-[#FF5F15]"
+      accentText="text-[#FF5F15]"
+      accentBorder="border-[#FF5F15]/30"
+      accentShadow="shadow-[0_0_30px_rgba(255,95,21,0.05)]"
+      testType="asfalto"
+      tests={tests}
+      loading={loading}
+    />
   );
 }
 
@@ -393,62 +357,37 @@ function AsphaltTestContent() {
       <div className="max-w-[1400px] mx-auto p-4 sm:p-6 space-y-6 print:hidden">
 
         {/* TABS SUPERIORES */}
-        <div className="sticky top-4 z-50">
-          <div className="flex overflow-x-auto no-scrollbar gap-1 mb-2 px-2">
+        <div className="sticky top-0 z-10">
+          <div className="flex overflow-x-auto no-scrollbar gap-1 mb-2 px-2 pt-2">
             {Object.keys(PRESETS).map(preset => (
-              <button key={preset} onClick={() => applyPreset(preset)} className={`px-5 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x ${activePreset === preset && viewMode === "DATA" ? 'bg-[#141414] text-[#FF5F15] border-[#FF5F15]/50' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
+              <button key={preset} onClick={() => applyPreset(preset)} className={`whitespace-nowrap px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x shrink-0 ${activePreset === preset && viewMode === "DATA" ? 'bg-[#141414] text-[#FF5F15] border-[#FF5F15]/50' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
                 {preset}
               </button>
             ))}
-            <button onClick={() => setViewMode("GRAFICA")} className={`px-5 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x flex items-center gap-2 ${viewMode === "GRAFICA" ? 'bg-[#141414] text-[#2BD45A] border-[#2BD45A]/50 shadow-[0_-5px_15px_rgba(43,212,90,0.15)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
-              <Activity size={14} /> GRAFICA OPTIMA
+            <button onClick={() => setViewMode("GRAFICA")} className={`whitespace-nowrap px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x flex items-center gap-2 shrink-0 ${viewMode === "GRAFICA" ? 'bg-[#141414] text-[#2BD45A] border-[#2BD45A]/50 shadow-[0_-5px_15px_rgba(43,212,90,0.15)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
+              <Activity size={14} /> GRÁFICA
             </button>
-            <button onClick={() => setViewMode("PREVIEW")} className={`px-5 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x flex items-center gap-2 ${viewMode === "PREVIEW" ? 'bg-[#141414] text-[#FF5F15] border-[#FF5F15]/50 shadow-[0_-5px_15px_rgba(255,95,21,0.15)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
-              <FileText size={14} /> VISTA PREVIA
+            <button onClick={() => setViewMode("PREVIEW")} className={`whitespace-nowrap px-4 py-2 text-xs font-bold rounded-t-xl transition-all border-t border-x flex items-center gap-2 shrink-0 ${viewMode === "PREVIEW" ? 'bg-[#141414] text-[#FF5F15] border-[#FF5F15]/50 shadow-[0_-5px_15px_rgba(255,95,21,0.15)]' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:bg-zinc-800'}`}>
+              <FileText size={14} /> PREVIA
             </button>
           </div>
 
-          <div className="bg-[#141414]/80 border border-[#FF5F15]/30 rounded-2xl rounded-tl-none p-3 md:p-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <div className="bg-[#FF5F15]/20 p-2 md:p-3 rounded-xl border border-[#FF5F15]/30 shrink-0"><Zap className="text-[#FF5F15]" size={22} /></div>
-              <div className="min-w-0">
-                <h1 className="text-lg md:text-xl font-bold text-white truncate">Asfaltos PRO V2</h1>
-                <p className="text-zinc-500 text-[10px] md:text-xs truncate">Evaluador inteligente.</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
-              <select value={data.status} onChange={e => handleChange('status', e.target.value)} className={`flex-1 lg:flex-none bg-[#0a0a0a] border rounded-lg p-2 text-[10px] md:text-xs font-bold outline-none cursor-pointer ${data.status === 'FINALIZADO' ? 'text-[#2BD45A] border-[#2BD45A]/50' : 'text-yellow-500 border-yellow-500/50'}`}>
-                <option value="EN PROCESO">EN PROCESO</option>
-                <option value="FINALIZADO">FINALIZADO</option>
-              </select>
-              <div className="flex items-center justify-between gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 flex-1 lg:flex-none">
-                 <div className="flex items-center gap-1">
-                   <Coins size={14} className="text-yellow-500" />
-                   <div className="text-[10px] md:text-xs">
-                     <span className="font-bold text-white">{freeReportsUsed < 3 ? `Gratis` : credits}</span>
-                   </div>
-                 </div>
-                 <button onClick={() => addCredits(5)} className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded text-white border border-zinc-700">+</button>
-              </div>
-              <Button 
-                onClick={handleSave} 
-                className="flex-1 lg:flex-none gap-2 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 h-auto py-2 text-xs"
-              >
-                {isSaving ? <Activity className="animate-spin" size={16} /> : <FileText size={16} />}
-                <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar'}</span>
-                <span className="sm:hidden">OK</span>
-              </Button>
-              <Button 
-                onClick={() => setShowPrintConfirm(true)} 
-                disabled={hasPrinted || isPrinting}
-                className={`flex-1 lg:flex-none gap-2 h-auto py-2 text-xs shadow-none ${hasPrinted ? 'bg-zinc-700 opacity-50' : 'bg-[#FF5F15] hover:bg-[#e04f0f]'}`}
-              >
-                <Printer size={16} /> 
-                <span className="hidden sm:inline">{hasPrinted ? 'Generado' : 'PDF'}</span>
-                <span className="sm:hidden">{hasPrinted ? 'Listo' : 'PDF'}</span>
-              </Button>
-            </div>
-          </div>
+          <TestPageHeader
+            icon={<Zap size={16} className="text-[#FF5F15]" />}
+            iconStyle="bg-[#FF5F15]/20 border-[#FF5F15]/30"
+            title="Asfaltos PRO V2"
+            subtitle="Evaluador inteligente."
+            status={data.status}
+            onStatusChange={val => handleChange('status', val)}
+            onSave={handleSave}
+            isSaving={isSaving}
+            onView={() => setViewMode('PREVIEW')}
+            onPdf={() => setShowPrintConfirm(true)}
+            hasPrinted={hasPrinted}
+            isPrinting={isPrinting}
+            pdfStyle="bg-[#FF5F15] hover:bg-[#e04f0f] shadow-[0_0_12px_rgba(255,95,21,0.4)]"
+            cardBorder="border-[#FF5F15]/30"
+          />
         </div>
 
         {/* MODAL DE CONFIRMACIÓN DE CRÉDITO */}

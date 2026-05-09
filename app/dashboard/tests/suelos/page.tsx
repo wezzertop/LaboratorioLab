@@ -1,10 +1,12 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { usePrintScale } from '@/src/lib/hooks/usePrintScale';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Layers, Activity, FileText, Printer, Save } from 'lucide-react';
+import { TestPageHeader } from '@/src/components/ui/TestPageHeader';
+import { TestDashboard } from '@/src/components/ui/TestDashboard';
 import { supabase } from '@/src/lib/supabase/client';
 import { Button } from '@/src/components/ui/Button';
 import { useCreditStore } from '@/src/store/useCreditStore';
@@ -12,7 +14,6 @@ import { useCreditStore } from '@/src/store/useCreditStore';
 function SuelosDashboard() {
   const [tests, setTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     async function loadTests() {
@@ -31,56 +32,19 @@ function SuelosDashboard() {
     loadTests();
   }, []);
 
-  if (loading) return <div className="p-12 text-[#b87333] text-center">Cargando dashboard...</div>;
-
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] border border-[#b87333]/30 p-6 rounded-3xl shadow-[0_0_30px_rgba(184,115,51,0.05)]">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <Layers className="text-[#b87333]" />
-            Dashboard de Mecánica de Suelos
-          </h1>
-          <p className="text-sm sm:text-base text-zinc-500">Historial de pruebas de compactación (Proctor) y Límites de Atterberg.</p>
-        </div>
-        <Link href="/dashboard/projects" className="w-full sm:w-auto text-center bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">
-          Ir a Proyectos
-        </Link>
-      </div>
-
-      <div className="bg-[#0a0a0a] border border-zinc-800 rounded-3xl p-6 shadow-xl">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Activity className="text-[#b87333]" /> �altimos Ensayes
-        </h2>
-
-        {tests.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-zinc-800 rounded-2xl text-zinc-500">
-            Aún no has realizado pruebas de mecánica de suelos. Ve a un Proyecto y crea un nuevo ensaye.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tests.map(test => (
-              <div key={test.id} onClick={() => router.push(`/dashboard/tests/suelos?testId=${test.id}&projectId=${test.project_id}`)} className="flex justify-between items-center p-4 bg-[#141414] border border-zinc-800 hover:border-[#b87333]/50 rounded-2xl transition-colors cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-lg bg-[#b87333]/10 text-[#b87333] group-hover:bg-[#b87333] group-hover:text-white transition-colors">
-                    <Layers size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{test.name}</h3>
-                    <p className="text-xs text-zinc-500">Obra: <span className="text-zinc-300 font-semibold">{test.projects?.name}</span> ⬢ {new Date(test.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${test.status === 'FINALIZADO' ? 'bg-[#2BD45A]/20 text-[#2BD45A]' : 'bg-yellow-500/20 text-yellow-500'}`}>
-                    {test.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <TestDashboard
+      icon={<Layers size={18} />}
+      title="Dashboard de Mecánica de Suelos"
+      subtitle="Historial de pruebas de compactación (Proctor) y Límites de Atterberg."
+      accentBg="bg-[#b87333]"
+      accentText="text-[#b87333]"
+      accentBorder="border-[#b87333]/30"
+      accentShadow="shadow-[0_0_30px_rgba(184,115,51,0.05)]"
+      testType="suelos"
+      tests={tests}
+      loading={loading}
+    />
   );
 }
 
@@ -306,34 +270,23 @@ function SuelosTestContent() {
       <div className="max-w-[1000px] mx-auto p-6 space-y-6 print:hidden">
         
         {/* HEADER BAR */}
-        <div className="sticky top-4 z-50 bg-[#141414]/80 border border-[#b87333]/30 rounded-2xl p-3 md:p-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-2xl backdrop-blur-xl">
-          <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="bg-[#b87333]/10 p-2 md:p-3 rounded-xl border border-[#b87333]/30 shrink-0"><Layers className="text-[#b87333]" size={22} /></div>
-            <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-white truncate">Calidad de Suelos</h1>
-              <p className="text-zinc-500 text-[10px] md:text-xs truncate">Compactación y Atterberg.</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
-            <select value={data.status} onChange={e => handleChange('status', e.target.value)} className={`flex-1 lg:flex-none bg-[#0a0a0a] border rounded-lg p-2 text-[10px] md:text-xs font-bold outline-none cursor-pointer ${data.status === 'FINALIZADO' ? 'text-[#2BD45A] border-[#2BD45A]/50' : 'text-yellow-500 border-yellow-500/50'}`}>
-              <option value="EN PROCESO">EN PROCESO</option>
-              <option value="FINALIZADO">FINALIZADO</option>
-            </select>
-            <Button onClick={() => setShowPreview(true)} className="flex-1 lg:flex-none bg-zinc-800 hover:bg-zinc-700 text-white gap-2 shadow-none border border-zinc-700 h-auto py-2 text-xs">
-              <FileText size={16} /> 
-              <span className="hidden sm:inline">Vista Previa</span>
-              <span className="sm:hidden">Ver</span>
-            </Button>
-            <Button 
-              onClick={() => setShowPrintConfirm(true)} 
-              disabled={hasPrinted || isPrinting}
-              className={`flex-1 lg:flex-none gap-2 h-auto py-2 text-xs shadow-none ${hasPrinted ? 'bg-zinc-700 opacity-50' : 'bg-[#b87333] hover:bg-[#a0632a]'}`}
-            >
-              <Printer size={16} /> 
-              <span className="hidden sm:inline">{hasPrinted ? 'Generado' : 'PDF'}</span>
-              <span className="sm:hidden">{hasPrinted ? 'Listo' : 'PDF'}</span>
-            </Button>
-          </div>
+        <div className="sticky top-0 z-10">
+          <TestPageHeader
+            icon={<Layers size={16} className="text-[#b87333]" />}
+            iconStyle="bg-[#b87333]/10 border-[#b87333]/30"
+            title="Calidad de Suelos"
+            subtitle="Compactación y Atterberg."
+            status={data.status}
+            onStatusChange={val => handleChange('status', val)}
+            onSave={handleSave}
+            isSaving={isSaving}
+            onView={() => setShowPreview(true)}
+            onPdf={() => setShowPrintConfirm(true)}
+            hasPrinted={hasPrinted}
+            isPrinting={isPrinting}
+            pdfStyle="bg-[#b87333] hover:bg-[#a0632a] shadow-[0_0_12px_rgba(184,115,51,0.4)]"
+            cardBorder="border-[#b87333]/30"
+          />
         </div>
 
         {/* MODAL VISTA PREVIA */}

@@ -18,15 +18,18 @@ export const Sidebar = ({ isMobile = false, onClose }: { isMobile?: boolean, onC
   const isActive = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
   return (
     <aside className={`${isMobile ? 'w-full h-full' : 'w-64 hidden md:flex h-screen border-r border-zinc-800'} bg-[#0a0a0a] flex flex-col text-zinc-300 print:hidden shrink-0`}>
-      <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
-        <div className="bg-[#FF5F15] p-2 rounded-xl text-white shadow-[0_0_15px_rgba(255,95,21,0.4)]">
-          <HardHat size={24} />
+      {/* Logo header — only shown on desktop sidebar */}
+      {!isMobile && (
+        <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
+          <div className="bg-[#FF5F15] p-2 rounded-xl text-white shadow-[0_0_15px_rgba(255,95,21,0.4)]">
+            <HardHat size={24} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">CIVIL-LAB</h1>
+            <p className="text-[10px] text-[#FFEA00] font-bold tracking-widest uppercase">Sistema SaaS</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">CIVIL-LAB</h1>
-          <p className="text-[10px] text-[#FFEA00] font-bold tracking-widest uppercase">Sistema SaaS</p>
-        </div>
-      </div>
+      )}
       
       <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-1 px-4 no-scrollbar">
         <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2 ml-2">Principal</div>

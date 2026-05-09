@@ -5,6 +5,8 @@ import { usePrintScale } from '@/src/lib/hooks/usePrintScale';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Beaker, Activity, FileText, Printer, Save } from 'lucide-react';
+import { TestPageHeader } from '@/src/components/ui/TestPageHeader';
+import { TestDashboard } from '@/src/components/ui/TestDashboard';
 import { supabase } from '@/src/lib/supabase/client';
 import { Button } from '@/src/components/ui/Button';
 import { useCreditStore } from '@/src/store/useCreditStore';
@@ -12,7 +14,6 @@ import { useCreditStore } from '@/src/store/useCreditStore';
 function ConcretoDashboard() {
   const [tests, setTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     async function loadTests() {
@@ -31,56 +32,19 @@ function ConcretoDashboard() {
     loadTests();
   }, []);
 
-  if (loading) return <div className="p-12 text-zinc-400 text-center">Cargando dashboard...</div>;
-
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] border border-zinc-500/30 p-6 rounded-3xl shadow-xl">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <Beaker className="text-zinc-400" />
-            Dashboard de Concreto
-          </h1>
-          <p className="text-sm sm:text-base text-zinc-500">Historial global de pruebas de compresión de cilindros de concreto.</p>
-        </div>
-        <Link href="/dashboard/projects" className="w-full sm:w-auto text-center bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">
-          Ir a Proyectos
-        </Link>
-      </div>
-
-      <div className="bg-[#0a0a0a] border border-zinc-800 rounded-3xl p-6 shadow-xl">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Activity className="text-zinc-500" /> �altimos Ensayes
-        </h2>
-
-        {tests.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-zinc-800 rounded-2xl text-zinc-500">
-            Aún no has realizado pruebas de concreto. Ve a un Proyecto y crea un nuevo ensaye.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tests.map(test => (
-              <div key={test.id} onClick={() => router.push(`/dashboard/tests/concreto?testId=${test.id}&projectId=${test.project_id}`)} className="flex justify-between items-center p-4 bg-[#141414] border border-zinc-800 hover:border-zinc-500/50 rounded-2xl transition-colors cursor-pointer group">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-lg bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700 transition-colors">
-                    <Beaker size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{test.name}</h3>
-                    <p className="text-xs text-zinc-500">Obra: <span className="text-zinc-300 font-semibold">{test.projects?.name}</span> ⬢ {new Date(test.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${test.status === 'FINALIZADO' ? 'bg-[#2BD45A]/20 text-[#2BD45A]' : 'bg-yellow-500/20 text-yellow-500'}`}>
-                    {test.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <TestDashboard
+      icon={<Beaker size={18} />}
+      title="Dashboard de Concreto"
+      subtitle="Historial global de pruebas de compresión de cilindros de concreto."
+      accentBg="bg-zinc-600"
+      accentText="text-zinc-400"
+      accentBorder="border-zinc-500/30"
+      accentShadow="shadow-xl"
+      testType="concreto"
+      tests={tests}
+      loading={loading}
+    />
   );
 }
 
@@ -348,39 +312,23 @@ function ConcretoTestContent() {
       <div className="max-w-[1200px] mx-auto p-6 space-y-6 print:hidden">
         
         {/* HEADER BAR */}
-        <div className="sticky top-4 z-50 bg-[#141414]/80 border border-zinc-500/30 rounded-2xl p-3 md:p-4 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-2xl backdrop-blur-xl">
-          <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="bg-zinc-800 p-2 md:p-3 rounded-xl border border-zinc-700 shrink-0"><Beaker className="text-zinc-300" size={22} /></div>
-            <div className="min-w-0">
-              <h1 className="text-lg md:text-xl font-bold text-white truncate">Ensaye de Concreto</h1>
-              <p className="text-zinc-500 text-[10px] md:text-xs truncate">Resistencia a la compresión.</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
-            <select value={data.status} onChange={e => handleChange('status', e.target.value)} className={`flex-1 lg:flex-none bg-[#0a0a0a] border rounded-lg p-2 text-[10px] md:text-xs font-bold outline-none cursor-pointer ${data.status === 'FINALIZADO' ? 'text-[#2BD45A] border-[#2BD45A]/50' : 'text-yellow-500 border-yellow-500/50'}`}>
-              <option value="EN PROCESO">EN PROCESO</option>
-              <option value="FINALIZADO">FINALIZADO</option>
-            </select>
-            <Button onClick={handleSave} className="flex-1 lg:flex-none bg-zinc-800 hover:bg-zinc-700 text-white gap-2 shadow-none border border-zinc-700 text-xs py-2 h-auto">
-              {isSaving ? <Activity className="animate-spin" size={16} /> : <Save size={16} />} 
-              <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar'}</span>
-              <span className="sm:hidden">OK</span>
-            </Button>
-            <Button onClick={() => setShowPreview(true)} className="flex-1 lg:flex-none bg-zinc-800 hover:bg-zinc-700 text-white gap-2 shadow-none border border-zinc-700 text-xs py-2 h-auto">
-              <FileText size={16} /> 
-              <span className="hidden sm:inline">Vista Previa</span>
-              <span className="sm:hidden">Ver</span>
-            </Button>
-            <Button 
-              onClick={() => setShowPrintConfirm(true)} 
-              disabled={hasPrinted || isPrinting}
-              className={`flex-1 lg:flex-none gap-2 text-xs py-2 h-auto ${hasPrinted ? 'bg-zinc-800 opacity-50' : 'bg-[#FF5F15] hover:bg-[#e04f0f]'}`}
-            >
-              <Printer size={16} /> 
-              <span className="hidden sm:inline">{hasPrinted ? 'Generado' : 'Imprimir PDF'}</span>
-              <span className="sm:hidden">{hasPrinted ? 'Listo' : 'PDF'}</span>
-            </Button>
-          </div>
+        <div className="sticky top-0 z-10">
+          <TestPageHeader
+            icon={<Beaker size={16} className="text-zinc-300" />}
+            iconStyle="bg-zinc-800 border-zinc-700"
+            title="Ensaye de Concreto"
+            subtitle="Resistencia a la compresión."
+            status={data.status}
+            onStatusChange={val => handleChange('status', val)}
+            onSave={handleSave}
+            isSaving={isSaving}
+            onView={() => setShowPreview(true)}
+            onPdf={() => setShowPrintConfirm(true)}
+            hasPrinted={hasPrinted}
+            isPrinting={isPrinting}
+            pdfStyle="bg-[#FF5F15] hover:bg-[#e04f0f] shadow-[0_0_12px_rgba(255,95,21,0.4)]"
+            cardBorder="border-zinc-500/30"
+          />
         </div>
 
         {/* MODAL DE CONFIRMACIÓN DE CRÉDITO */}

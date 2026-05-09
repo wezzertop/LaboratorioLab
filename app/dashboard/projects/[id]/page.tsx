@@ -115,33 +115,34 @@ export default function ProjectDetailsPage() {
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#141414] border border-zinc-800 p-6 rounded-3xl shadow-xl gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <button onClick={() => router.push('/dashboard/projects')} className="text-zinc-500 hover:text-white transition-colors">
-              <ArrowLeft size={24} />
+      <div className="flex flex-col gap-4 bg-[#141414] border border-zinc-800 p-4 sm:p-6 rounded-3xl shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <button onClick={() => router.push('/dashboard/projects')} className="text-zinc-500 hover:text-white transition-colors shrink-0 p-1">
+              <ArrowLeft size={22} />
             </button>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <FolderOpen className="text-[#FF5F15]" />
-              {project.name}
-            </h1>
-            <span className="px-3 py-1 bg-[#2BD45A]/10 text-[#2BD45A] border border-[#2BD45A]/20 rounded-full text-[10px] font-bold tracking-wider">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 leading-tight">
+                <FolderOpen className="text-[#FF5F15] shrink-0" size={24} />
+                <span className="truncate">{project.name}</span>
+              </h1>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 font-medium mt-1">
+                {project.client && <span className="flex items-center gap-1"><User size={12}/> {project.client}</span>}
+                {project.location && <span className="flex items-center gap-1"><MapPin size={12}/> {project.location}</span>}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2 py-1 bg-[#2BD45A]/10 text-[#2BD45A] border border-[#2BD45A]/20 rounded-full text-[9px] font-bold tracking-wider hidden sm:inline-flex">
               {project.status}
             </span>
+            <button onClick={() => setIsEditing(true)} className="p-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg transition-colors border border-zinc-800 hover:border-[#FF5F15]/30" title="Editar Proyecto">
+              <Edit size={16} />
+            </button>
+            <button onClick={handleDelete} className="p-2 bg-zinc-900 hover:bg-red-900/50 text-red-500 rounded-lg transition-colors border border-zinc-800 hover:border-red-500/30" title="Eliminar Proyecto">
+              <Trash2 size={16} />
+            </button>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500 font-medium ml-12">
-            {project.client && <span className="flex items-center gap-1"><User size={14}/> Cliente: {project.client}</span>}
-            {project.location && <span className="flex items-center gap-1"><MapPin size={14}/> {project.location}</span>}
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <button onClick={() => setIsEditing(true)} className="p-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg transition-colors border border-zinc-800 hover:border-[#FF5F15]/30" title="Editar Proyecto">
-            <Edit size={18} />
-          </button>
-          <button onClick={handleDelete} className="p-2 bg-zinc-900 hover:bg-red-900/50 text-red-500 rounded-lg transition-colors border border-zinc-800 hover:border-red-500/30" title="Eliminar Proyecto">
-            <Trash2 size={18} />
-          </button>
         </div>
       </div>
 
