@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { HardHat, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { HardHat, ArrowRight, UserPlus, LogIn, MailCheck, ArrowLeft } from 'lucide-react';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { supabase } from '@/src/lib/supabase/client';
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isEmailSent, setIsEmailSent] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,13 +29,13 @@ export default function LoginPage() {
           email,
           password,
           options: {
-            data: { full_name: fullName }
+            data: { full_name: fullName },
+            emailRedirectTo: `${window.location.origin}/dashboard/projects`
           }
         });
         
         if (error) throw error;
-        alert("¡Registro exitoso! Ya puedes iniciar sesión.");
-        setIsRegister(false);
+        setIsEmailSent(true);
       } else {
         // Inicio de sesión
         const { error } = await supabase.auth.signInWithPassword({
@@ -67,7 +68,9 @@ export default function LoginPage() {
         
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white tracking-tight mb-2">CIVIL-LAB</h1>
-          <p className="text-zinc-500 text-sm">{isRegister ? 'Crea tu cuenta de laboratorista.' : 'Acceso exclusivo para Laboratoristas.'}</p>
+          <p className="text-zinc-500 text-sm">
+            {isEmailSent ? 'Verifica tu identidad' : (isRegister ? 'Crea tu cuenta de laboratorista.' : 'Acceso exclusivo para Laboratoristas.')}
+          </p>
         </div>
 
         {errorMsg && (
@@ -76,7 +79,31 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleAuth} className="space-y-4">
+        {isEmailSent ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in zoom-in duration-500">
+            <div className="bg-[#2BD45A]/10 p-4 rounded-full mb-4 border border-[#2BD45A]/20">
+              <MailCheck size={48} className="text-[#2BD45A]" />
+            </div>
+            <h2 className="text-xl font-semibold text-white mb-2">¡Revisa tu bandeja de entrada!</h2>
+            <p className="text-zinc-400 text-sm mb-8 max-w-[280px]">
+              Hemos enviado un enlace de confirmación a <strong className="text-white">{email}</strong>. Por favor, verifica tu correo para poder iniciar sesión.
+            </p>
+            <Button 
+              onClick={() => {
+                setIsEmailSent(false);
+                setIsRegister(false);
+                setPassword('');
+              }}
+              variant="outline"
+              fullWidth
+              className="gap-2"
+              type="button"
+            >
+              <ArrowLeft size={16} /> Volver al inicio de sesión
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleAuth} className="space-y-4">
           {isRegister && (
             <div>
               <Input 
@@ -115,8 +142,10 @@ export default function LoginPage() {
             {isRegister ? <UserPlus size={20} /> : <LogIn size={20} />}
           </Button>
         </form>
+        )}
 
-        <div className="mt-8 pt-6 border-t border-zinc-800 text-center">
+        {!isEmailSent && (
+          <div className="mt-8 pt-6 border-t border-zinc-800 text-center">
           <p className="text-xs text-zinc-500">
             {isRegister ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'} {' '}
             <button 
@@ -127,6 +156,7 @@ export default function LoginPage() {
             </button>
           </p>
         </div>
+        )}
       </div>
     </div>
   );
